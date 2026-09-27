@@ -11,7 +11,7 @@ import inet.http;
 import JSON;
 
 /*DSG{{*/
-var winform = win.form(text="hostc 可视化面板";right=619;bottom=561;bgcolor=0xF2F3F5)
+var winform = win.form(text="hostc 可视化面板";right=619;bottom=621;bgcolor=0xF2F3F5)
 winform.add(
 bkTitle={cls="bkplus";text="hostc";left=0;top=0;right=620;bottom=46;bgcolor=0x20242B;align="left";color=0xFFFFFF;font=LOGFONT(h=-17;weight=700);textPadding={left=18};z=1};
 cfgCard={cls="bkplus";left=14;top=60;right=606;bottom=132;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=2};
@@ -28,14 +28,22 @@ btnQr={cls="button";text="二维码";left=526;top=206;right=594;bottom=230;disab
 lbLocal={cls="static";text="本地地址";left=28;top=238;right=100;bottom=258;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=19};
 editLocal={cls="edit";text="http://127.0.0.1:3000/";left=110;top=236;right=300;bottom=260;edge=1;readonly=1;z=20};
 btnCopyUrl={cls="button";text="复制公网地址";left=410;top=236;right=594;bottom=260;z=21};
-logCard={cls="bkplus";left=14;top=276;right=606;bottom=500;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=22};
-logTitle={cls="static";text="运行日志";left=28;top=286;right=120;bottom=306;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=23};
-btnClear={cls="button";text="清空";left=536;top=284;right=594;bottom=308;z=24};
-editLog={cls="edit";left=28;top=312;right=592;bottom=488;edge=1;multiline=1;vscroll=1;readonly=1;z=25};
-btnInstall={cls="button";text="安装/修复 hostc";left=14;top=512;right=164;bottom=546;z=26};
-btnDoctor={cls="button";text="环境诊断";left=174;top=512;right=294;bottom=546;z=27};
-btnStart={cls="button";text="启动隧道";left=386;top=512;right=496;bottom=546;z=28};
-btnStop={cls="button";text="停止隧道";left=506;top=512;right=606;bottom=546;disabled=1;z=29}
+maintCard={cls="bkplus";left=14;top=276;right=606;bottom=376;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=22};
+maintTitle={cls="static";text="版本与维护";left=28;top=286;right=120;bottom=306;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=23};
+lbAppVer={cls="static";text="软件版本";left=28;top=314;right=90;bottom=334;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=24};
+txtAppVer={cls="static";text="v-";left=100;top=314;right=190;bottom=334;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=25};
+lbHostcVer={cls="static";text="hostc 版本";left=300;top=314;right=382;bottom=334;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=26};
+txtHostcVer={cls="static";text="未安装";left=390;top=314;right=470;bottom=334;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=27};
+btnUpdateApp={cls="button";text="检查软件更新";left=28;top=344;right=170;bottom=370;z=28};
+btnUpdateHostc={cls="button";text="升级 hostc";left=180;top=344;right=300;bottom=370;z=29};
+btnInstall={cls="button";text="安装/修复 hostc";left=310;top=344;right=452;bottom=370;z=30};
+btnDoctor={cls="button";text="环境诊断";left=462;top=344;right=592;bottom=370;z=31};
+logCard={cls="bkplus";left=14;top=388;right=606;bottom=560;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=32};
+logTitle={cls="static";text="运行日志";left=28;top=398;right=120;bottom=418;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=33};
+btnClear={cls="button";text="清空";left=536;top=396;right=594;bottom=420;z=34};
+editLog={cls="edit";left=28;top=424;right=592;bottom=548;edge=1;multiline=1;vscroll=1;readonly=1;z=35};
+btnStart={cls="button";text="启动隧道";left=386;top=572;right=496;bottom=606;z=36};
+btnStop={cls="button";text="停止隧道";left=506;top=572;right=606;bottom=606;disabled=1;z=37}
 )
 /*}}*/
 
@@ -143,16 +151,41 @@ var setState = function(text, colorBgr){
 	winform.stateDot.redraw();
 };
 
-// 安装/更新期间批量禁用或恢复操作按钮
+// 安装/更新期间批量禁用或恢复操作按钮（隧道停止键由运行状态单独管理）
 var setButtonsBusy = function(busy){
 	winform.btnInstall.disabled = busy;
 	winform.btnDoctor.disabled = busy;
 	winform.btnStart.disabled = busy;
+	winform.btnUpdateHostc.disabled = busy;
+	winform.btnUpdateApp.disabled = busy;
 };
 
 // 固定的本地回环主机与官方服务器（hostc 2.x 默认服务器域名）
 var LOCAL_HOST = "127.0.0.1";
 var SERVER_HOST = "hostc.app";
+
+// 软件（本面板）自身版本；约定：随内置 hostc 版本同步，当前内置 hostc 为 2.0.4
+var APP_VERSION = "2.0.4";
+var REPO_OWNER = "momochong0";
+var REPO_NAME = "hostc-gui";
+var RELEASES_URL = "https://github.com/" ++ REPO_OWNER ++ "/" ++ REPO_NAME ++ "/releases";
+
+// 刷新「版本与维护」卡片：软件版本固定显示，hostc 版本实时解析
+// 返回权威 hostc 版本号（null=未安装），供隧道状态等处复用，保证两处版本始终一致
+var refreshVersionDisplay = function(){
+	winform.txtAppVer.text = "v" ++ APP_VERSION;
+	resolveHostc();
+	var hv = null;
+	if(hostcEntry){
+		var base = io.exist(io.joinpath(globalRoot,"hostc")) ? globalRoot : localRoot;
+		hv = readPkgVersion(base);
+		winform.txtHostcVer.text = hv ? ("v" ++ tostring(hv)) : "未知";
+	}
+	else {
+		winform.txtHostcVer.text = "未安装";
+	}
+	return hv;
+};
 
 // 根据端口输入框实时更新「本地地址」；端口非法时清空，避免显示错误地址
 var syncLocalAddress = function(){
@@ -355,9 +388,11 @@ installHostc = function(verbose){
 
 	setButtonsBusy(false);
 	if(ok){
-		var ver = readPkgVersion(io.exist(io.joinpath(globalRoot,"hostc")) ? globalRoot : localRoot);
+		// 唯一数据源：refreshVersionDisplay 刷新「版本与维护」并返回权威版本号
+		var ver = refreshVersionDisplay();
 		log("hostc 安装成功（" ++ usedWay ++ "），版本 " ++ tostring(ver) ++ "。");
-		setState("已安装 hostc " ++ tostring(ver), 0x34A853);
+		// 隧道状态使用同一版本号，保证两处完全一致
+		setState(ver ? ("已安装 hostc " ++ tostring(ver)) : "已安装 hostc", 0x34A853);
 		if(verbose) winform.msgbox('hostc 安装成功！\n来源：' ++ usedWay ++ '\n版本：' ++ tostring(ver));
 	}
 	else {
@@ -413,6 +448,107 @@ installFromLocalZip = function(){
 	}
 	winform.msgbox("该离线包无效或已损坏。");
 	return false;
+};
+
+// ========== 更新软件（本面板） ==========
+// 本软件为单文件 EXE，无法在线热替换：检查 GitHub 最新 Release，有新版则引导用户前往下载
+var compareVersion = function(a, b){
+	// 按数字逐段比较；a>b 返回 1，相等 0，a<b 返回 -1
+	var pa = string.split(a, ".");
+	var pb = string.split(b, ".");
+	for(i=1, math.max(#pa, #pb)){
+		var x = tonumber(pa[[i]]) : 0;
+		var y = tonumber(pb[[i]]) : 0;
+		if(x > y) return 1;
+		if(x < y) return -1;
+	}
+	return 0;
+};
+
+// 通过 git credential 获取本机存储的 GitHub token（用于提高 API 限额）；失败返回 null
+var getGithubToken = function(){
+	var tmpDir = string.expand("%TEMP%");
+	var inFile = io.joinpath(tmpDir, "_hc_cred_in.txt");
+	var outFile = io.joinpath(tmpDir, "_hc_cred_out.txt");
+	string.save(inFile, 'protocol=https\r\nhost=github.com\r\n\r\n');
+	var p = process.popen.cmd(`git credential fill < ` + inFile + ` > ` + outFile);
+	if(p){ p.readAll(); p.close(); }
+	var data = string.load(outFile);
+	io.remove(inFile); io.remove(outFile);
+	if(data){
+		var tok = string.match(data, "password=([^\r\n]+)");
+		if(tok && #tok >= 20) return tok;
+	}
+	return null;
+};
+
+var checkAppUpdate = function(){
+	setState("正在检查软件更新...", 0xF5A623);
+	winform.btnUpdateApp.disabled = true;
+	log("检查软件（面板）更新，当前版本 v" ++ APP_VERSION ++ " ...");
+
+	var token = getGithubToken();
+
+	thread.invoke(
+		function(winform, appVersion, releasesUrl, apiUrl, token){
+			import inet.http;
+			var writeLog = function(msg){
+				winform.editLog.text ++= time().format("%H:%M:%S") ++ "  " ++ msg ++ '\r\n';
+			};
+
+			var http = inet.http();
+			var headers = { ["User-Agent"]="hostc-gui" };
+			if(token) headers.Authorization = "token " ++ token;
+			http.setHeaders(headers);
+			var ret, err = http.get(apiUrl);
+			if(!ret){
+				writeLog("检查软件更新失败：无法连接 GitHub（" ++ tostring(err) ++ "）。");
+				winform.stateText.text = "未启动";
+				winform.stateDot.bgcolor = 0x9AA0A6;
+				winform.stateDot.redraw();
+				winform.btnUpdateApp.disabled = false;
+				winform.msgbox("检查软件更新失败：无法连接 GitHub，请检查网络后重试。");
+				return;
+			}
+
+			import JSON;
+			var data = JSON.parse(ret);
+			if(!data || !data.tag_name){
+				writeLog("检查软件更新失败：返回数据无法解析。");
+				winform.stateText.text = "未启动";
+				winform.stateDot.bgcolor = 0x9AA0A6;
+				winform.stateDot.redraw();
+				winform.btnUpdateApp.disabled = false;
+				winform.msgbox("检查软件更新失败，请稍后重试。");
+				return;
+			}
+
+			var latest = string.replace(tostring(data.tag_name), "^v", "");
+			writeLog("最新发布版本：v" ++ latest);
+			var cmp = compareVersion(latest, appVersion);
+
+			// 回到界面线程复位状态并提示
+			winform.invoke(function(){
+				winform.stateText.text = "未启动";
+				winform.stateDot.bgcolor = 0x9AA0A6;
+				winform.stateDot.redraw();
+				winform.btnUpdateApp.disabled = false;
+
+				if(cmp <= 0){
+					winform.msgbox("当前已是最新版本（v" ++ appVersion ++ "）。");
+				}
+				else {
+					var ok = winform.msgboxTest(
+						"发现新版本 v" + latest + "（当前 v" ++ appVersion ++ "）。\r\n\r\n"
+						++ "本软件需下载新版 EXE 替换，是否现在打开下载页面？");
+					if(ok) process.execute(releasesUrl + "/latest");
+				}
+			});
+		},
+		winform, APP_VERSION, RELEASES_URL,
+		"https://api.github.com/repos/" ++ REPO_OWNER ++ "/" ++ REPO_NAME ++ "/releases/latest",
+		token
+	);
 };
 
 // ========== 更新 hostc（更新底层 npm 包） ==========
@@ -475,7 +611,8 @@ var updateHostc = function(){
 				var o = p.readAll();
 				if(o){
 					var v = string.trim(o);
-					if(string.find(v, "^%d+%.%d+")) return v;
+					// aardio 模式数字用 \d（% 是对称操作符）；双引号内 \ 不转义，直接写
+					if(string.find(v, "^\d+\.\d+")) return v;
 				}
 				return null;
 			};
@@ -506,6 +643,7 @@ var updateHostc = function(){
 
 			// 执行升级（回到界面线程，复用多级安装容错）
 			logLine("开始升级到 " ++ latest ++ " ...");
+			// installHostc 在 UI 线程执行并自行刷新版本标签
 			winform.invoke(function(){
 				installHostc(false);
 			});
@@ -569,25 +707,31 @@ var runDoctor = function(){
 
 // ========== 二维码弹窗 ==========
 
+var qrForm = null;  // 外层引用：局部 qform 在函数返回后会被回收，导致窗口一闪即消失
+
 var showQr = function(){
 	if(!readyUrl) return;
+	// 已打开则先关闭旧窗口（同时释放旧位图）
+	if(qrForm){ qrForm.close(); qrForm = null; }
+
 	var qr = qrencode.bitmap(readyUrl);
 	var bmp = qr.copyBitmap(280);
 
-	var qform = win.form(text="公网地址二维码";right=319;bottom=379;bgcolor=0xFFFFFF;parent=winform);
-	qform.add(
+	qrForm = win.form(text="公网地址二维码";right=319;bottom=379;bgcolor=0xFFFFFF;parent=winform);
+	qrForm.add(
 		qrPlus={cls="plus";left=20;top=20;right=300;bottom=300;bgcolor=0xFFFFFF;z=1};
 		qrUrl={cls="static";text=readyUrl;left=10;top=310;right=310;bottom=334;center=1;color=0x202124;font=LOGFONT(h=-12);z=2};
 		btnClose={cls="button";text="关闭";left=120;top=340;right=200;bottom=368;z=3}
 	)
-	qform.qrPlus.background = bmp;
-	qform.btnClose.oncommand = function(){
-		qform.close();
+	qrForm.qrPlus.background = bmp;
+	qrForm.btnClose.oncommand = function(){
+		qrForm.close();
 	};
-	qform.onDestroy = function(){
+	qrForm.onDestroy = function(){
 		bmp.delete();
+		qrForm = null;
 	};
-	qform.show();
+	qrForm.show();
 };
 
 // ========== 事件绑定 ==========
@@ -600,13 +744,15 @@ winform.editPort.onNotify = function(id, code){
 winform.btnStart.oncommand = startTunnel;
 winform.btnStop.oncommand = stopTunnel;
 winform.btnDoctor.oncommand = runDoctor;
+winform.btnUpdateApp.oncommand = checkAppUpdate;
+winform.btnUpdateHostc.oncommand = updateHostc;
 winform.btnInstall.oncommand = function(){
 	if(!checkNode()){ promptInstallNode(); return; }
 	if(hostcProc){
 		log("修复前先停止正在运行的隧道 ...");
 		stopTunnel();
 	}
-	installHostc(true);
+	if(installHostc(true)) refreshVersionDisplay();
 };
 winform.btnQr.oncommand = showQr;
 winform.btnClear.oncommand = function(){
@@ -643,16 +789,33 @@ winform.onClose = function(){
 	::User32.SendMessageW(winform.hwnd,0x80,1,hBig:hSmall);
 }
 winform.show();
-log("hostc 可视化面板已启动。");
+log("hostc 可视化面板已启动（软件 v" ++ APP_VERSION ++ "）。");
+refreshVersionDisplay();
 
-// 启动后静默检查一次新版本（仅写入日志提示，不弹窗打扰）
+// 启动后静默检查一次更新（软件 + hostc），仅写入日志提示，不弹窗打扰
 winform.setTimeout(
 	function(){
-		if(!checkNode()) return 0;
 		thread.invoke(
-			function(winform){
+			function(winform, appVersion, apiLatest, apiReleases){
+				import inet.http;
+				// 1) 软件（面板）最新版本
+				var h1 = inet.http();
+				var r1 = h1.get(apiLatest);
+				if(r1){
+					import JSON;
+					var j1 = JSON.parse(r1);
+					if(j1 && j1.tag_name){
+						var latestApp = string.replace(tostring(j1.tag_name), "^v", "");
+						if(compareVersion(latestApp, appVersion) > 0){
+							winform.editLog.text ++= time().format("%H:%M:%S")
+								++ "  软件有新版本 v" ++ latestApp
+								++ "，点击「检查软件更新」下载。" ++ '\r\n';
+						}
+					}
+				}
+
+				// 2) hostc 最新版本（需本机 Node；官方失败则镜像）
 				import process.popen;
-				// 当前版本：npm 全局优先，本地离线其次
 				var cur = null;
 				var gr = string.trim(process.popen.cmd("npm root -g").readAll());
 				if(gr){
@@ -660,25 +823,24 @@ winform.setTimeout(
 					if(d){ import JSON; var p = JSON.parse(d); if(p) cur = tostring(p.version); }
 				}
 				if(!cur){
-					import JSON;
-					var d2 = string.load("hostc\package.json");
-					if(d2){ var p2 = JSON.parse(d2); if(p2) cur = tostring(p2.version); }
+					var d2 = string.load(io.joinpath(io.fullpath("/"), "hostc-data\hostc\package.json"));
+					if(d2){ import JSON; var p2 = JSON.parse(d2); if(p2) cur = tostring(p2.version); }
 				}
-				// 最新版本：官方失败则镜像
-				var latest = null;
 				var q = function(reg){
 					var o = process.popen.cmd("npm view hostc version --registry=" ++ reg).readAll();
-					if(o){ var v = string.trim(o); if(string.find(v,"^%d+%.%d+")) return v; }
+					if(o){ var v = string.trim(o); if(string.find(v,"^\d+\.\d+")) return v; }
 					return null;
 				};
-				latest = q("https://registry.npmjs.org") : q("https://registry.npmmirror.com");
-				if(cur && latest && latest != cur){
+				var latestHostc = q("https://registry.npmjs.org") : q("https://registry.npmmirror.com");
+				if(cur && latestHostc && compareVersion(latestHostc, cur) > 0){
 					winform.editLog.text ++= time().format("%H:%M:%S")
-						++ "  发现新版本 " ++ latest ++ "（当前 " ++ cur
-						++ "），点击「更新 hostc」即可升级。" ++ '\r\n';
+						++ "  hostc 有新版本 v" ++ latestHostc ++ "（当前 v" ++ cur
+						++ "），点击「升级 hostc」。" ++ '\r\n';
 				}
 			},
-			winform
+			winform, APP_VERSION,
+			"https://api.github.com/repos/" ++ REPO_OWNER ++ "/" ++ REPO_NAME ++ "/releases/latest",
+			RELEASES_URL
 		);
 		return 0;
 	},
@@ -691,9 +853,9 @@ if(!nodeVersion){
 }
 else {
 	log("运行环境 Node.js " ++ nodeVersion);
-	if(resolveHostc()){
+	if(hostcEntry){
 		log("已检测到 hostc v" ++ tostring(readPkgVersion(io.exist(io.joinpath(globalRoot,"hostc")) ? globalRoot : localRoot))
-			++ "：" ++ hostcEntry);
+			++ "。");
 	}
 	else {
 		log("提示：尚未安装 hostc，点击「安装/修复 hostc」或直接「启动隧道」自动安装。");
