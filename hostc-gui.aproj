@@ -3,5 +3,6 @@
 	<file name="main" path="main.aardio"/>
 	<folder name="res" path="res" embed="true" local="false" ignored="false">
 		<file name="icon.ico" path="res\icon.ico"/>
+		<file name="hostc-offline.zip" path="res\hostc-offline.zip"/>
 	</folder>
 </project>
