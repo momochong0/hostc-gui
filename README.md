@@ -18,7 +18,7 @@
 
 ### 直接使用 EXE
 
-前往 [**Releases 页面**](https://github.com/momochong0/hostc-gui/releases/latest) 下载 `hostc-panel-<版本>.exe`（或使用仓库内 `publish/hostc面板.exe`），双击运行。
+前往 [**Releases 页面**](https://github.com/momochong0/hostc-gui/releases/latest) 下载 `hostc-panel-<版本>.exe`，双击运行。
 
 - 已安装 Node.js：首次启动隧道时会自动通过 npm 安装 hostc；
 - 未安装 Node.js：软件会弹窗并引导至 [Node.js 下载页](https://nodejs.org/zh-cn/download)。
@@ -37,7 +37,7 @@
 
 1. 安装 [aardio](https://www.aardio.com/)；
 2. 用 aardio 打开 `hostc-gui.aproj`；
-3. 按 F7 发布，生成 `publish/hostc面板.exe`。
+3. 按 F7 发布，在 `publish/` 目录生成可执行文件（该目录不纳入版本库，EXE 统一发布在 Releases）。
 
 ## 目录结构
 
@@ -45,11 +45,12 @@
 hostc-gui/
 ├─ main.aardio        # 主程序
 ├─ hostc-gui.aproj    # aardio 工程文件
-├─ res/
-│  ├─ icon.ico        # 应用图标（多尺寸）
-│  └─ favicon.svg     # 原始图标
-└─ publish/
-   └─ hostc面板.exe    # 已发布的可执行文件
+└── res/
+   ├── icon.ico        # 应用图标（多尺寸）
+   └── favicon.svg     # 原始图标
+```
+
+> 编译产物输出到 `publish/`（已被 .gitignore 忽略），发布的 EXE 见 [Releases](https://github.com/momochong0/hostc-gui/releases)。
 ```
 
 ## 致谢
