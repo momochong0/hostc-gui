@@ -76,11 +76,11 @@ var checkNode = function(){
 // 未检测到 Node 时弹窗引导用户安装（可选打开官方下载页）
 var promptInstallNode = function(){
 	var ok = winform.msgboxTest(
-		"未检测到 Node.js 运行环境。\r\n\r\n"
-		++ "hostc 基于 Node.js 运行，请先安装 Node.js（建议下载 LTS 长期支持版），\r\n"
-		++ "安装完成后重新打开本软件即可。\r\n\r\n"
-		++ "是否现在打开 Node.js 官方下载页面？"
-		, "需要安装 Node.js");
+		'未检测到 Node.js 运行环境。\r\n\r\n'
+		++ 'hostc 基于 Node.js 运行，请先安装 Node.js（建议下载 LTS 长期支持版），\r\n'
+		++ '安装完成后重新打开本软件即可。\r\n\r\n'
+		++ '是否现在打开 Node.js 官方下载页面？'
+		, '需要安装 Node.js');
 	if(ok){
 		process.execute("https://nodejs.org/zh-cn/download");
 	}
@@ -193,7 +193,7 @@ var startTunnel = function(){
 
 	// 2. 检查 hostc 是否已安装（缺失则自动走多级安装容错）
 	if(!resolveHostc()){
-		if( ! winform.msgboxTest("尚未检测到 hostc，是否立即安装？\n将依次尝试官方源、国内镜像与内置离线包。")) return;
+		if( ! winform.msgboxTest('尚未检测到 hostc，是否立即安装？\n将依次尝试官方源、国内镜像与内置离线包。')) return;
 		if(!installHostc(false)) return;
 	}
 
@@ -201,7 +201,7 @@ var startTunnel = function(){
 	var tcp = wsock.tcp.client();
 	var portOpen = tcp.connectTimeout(localHost, port, 1.5);
 	if(!portOpen){
-		if( ! winform.msgboxTest("本地 " ++ localHost ++ ":" ++ port ++ " 似乎还没有服务在监听。\n仍然继续启动隧道吗？")) return;
+		if( ! winform.msgboxTest('本地 ' ++ localHost ++ ':' ++ port ++ ' 似乎还没有服务在监听。\n仍然继续启动隧道吗？')) return;
 	}
 
 	// 4. 构造参数并启动进程（2.x 目标直接写端口；1.x 兼容写法）
@@ -328,15 +328,15 @@ installHostc = function(verbose){
 		var ver = readPkgVersion(io.exist(io.joinpath(globalRoot,"hostc")) ? globalRoot : localRoot);
 		log("hostc 安装成功（" ++ usedWay ++ "），版本 " ++ tostring(ver) ++ "。");
 		setState("已安装 hostc " ++ tostring(ver), 0x34A853);
-		if(verbose) winform.msgbox("hostc 安装成功！\n来源：" ++ usedWay ++ "\n版本：" ++ tostring(ver));
+		if(verbose) winform.msgbox('hostc 安装成功！\n来源：' ++ usedWay ++ '\n版本：' ++ tostring(ver));
 	}
 	else {
 		log("hostc 全部安装方式均失败。");
 		setState("安装失败", 0xEA4335);
 		if(verbose){
 			var r = winform.msgboxTest(
-				"自动安装失败。\n\n若你已从网盘等渠道下载了 hostc 的离线 zip，\n"
-				++ "可点「是」选择该文件进行本地安装。\n\n是否选择本地离线包？");
+				'自动安装失败。\n\n若你已从网盘等渠道下载了 hostc 的离线 zip，\n'
+				++ '可点「是」选择该文件进行本地安装。\n\n是否选择本地离线包？');
 			if(r){ installFromLocalZip(); }
 		}
 	}
