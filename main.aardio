@@ -1,0 +1,535 @@
+// hostc 可视化面板：对 https://github.com/akazwz/hostc 的功能封装
+// hostc 是基于 Cloudflare Workers 的内网穿透工具，给本地 HTTP/WebSocket 服务生成公网 URL
+
+import win.ui;
+import win.clip;
+import process;
+import process.popen;
+import qrencode.bitmap;
+import wsock.tcp.client;
+import JSON;
+
+/*DSG{{*/
+var winform = win.form(text="hostc 可视化面板";right=619;bottom=579;bgcolor=0xF2F3F5)
+winform.add(
+bkTitle={cls="bkplus";text="hostc";left=0;top=0;right=620;bottom=46;bgcolor=0x20242B;align="left";color=0xFFFFFF;font=LOGFONT(h=-17;weight=700);textPadding={left=18};z=1};
+cfgCard={cls="bkplus";left=14;top=60;right=606;bottom=180;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=2};
+cfgTitle={cls="static";text="隧道配置";left=28;top=70;right=120;bottom=90;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=3};
+lbPort={cls="static";text="本地端口";left=28;top=98;right=100;bottom=118;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=4};
+editPort={cls="edit";text="3000";left=110;top=96;right=230;bottom=120;edge=1;z=5};
+lbHost={cls="static";text="本地主机";left=282;top=98;right=354;bottom=118;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=6};
+editHost={cls="edit";text="127.0.0.1";left=362;top=96;right=482;bottom=120;edge=1;z=7};
+lbServer={cls="static";text="服务器";left=28;top=138;right=100;bottom=158;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=8};
+editServer={cls="edit";text="https://hostc.dev";left=110;top=136;right=360;bottom=160;edge=1;z=9};
+lbCh={cls="static";text="通道数";left=400;top=138;right=452;bottom=158;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=10};
+editCh={cls="edit";text="2";left=460;top=136;right=530;bottom=160;edge=1;z=11};
+statusCard={cls="bkplus";left=14;top=192;right=606;bottom=312;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=12};
+statusTitle={cls="static";text="隧道状态";left=28;top=202;right=120;bottom=222;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=13};
+stateDot={cls="plus";left=28;top=226;right=44;bottom=242;bgcolor=0x9AA0A6;border={radius=9};z=14};
+stateText={cls="static";text="未启动";left=50;top=226;right=160;bottom=246;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=15};
+lbUrl={cls="static";text="公网地址";left=28;top=256;right=100;bottom=276;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=16};
+editUrl={cls="edit";left=110;top=254;right=520;bottom=278;edge=1;readonly=1;z=17};
+btnQr={cls="button";text="二维码";left=526;top=254;right=594;bottom=278;disabled=1;z=18};
+lbLocal={cls="static";text="本地地址";left=28;top=286;right=100;bottom=306;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=19};
+editLocal={cls="edit";left=110;top=284;right=300;bottom=308;edge=1;readonly=1;z=20};
+btnCopyUrl={cls="button";text="复制公网地址";left=410;top=284;right=594;bottom=308;z=21};
+logCard={cls="bkplus";left=14;top=324;right=606;bottom=518;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=22};
+logTitle={cls="static";text="运行日志";left=28;top=334;right=120;bottom=354;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=23};
+btnClear={cls="button";text="清空";left=536;top=332;right=594;bottom=356;z=24};
+editLog={cls="edit";left=28;top=360;right=592;bottom=506;edge=1;multiline=1;vscroll=1;readonly=1;z=25};
+btnDoctor={cls="button";text="环境诊断";left=14;top=530;right=134;bottom=564;z=26};
+btnUpdate={cls="button";text="更新 hostc";left=144;top=530;right=284;bottom=564;z=27};
+btnStart={cls="button";text="启动隧道";left=386;top=530;right=496;bottom=564;z=28};
+btnStop={cls="button";text="停止隧道";left=506;top=530;right=606;bottom=564;disabled=1;z=29}
+)
+/*}}*/
+
+// ========== 全局状态 ==========
+var hostcProc = null;   // hostc 进程
+var readTimerId = null; // 读取输出的定时器
+var readyUrl = "";      // 当前公网地址
+var onProcEnded;        // 进程结束复位函数（前置声明）
+
+// hostc 全局安装入口（node 直接启动，进程干净、易清理）
+var globalRoot = null;
+var hostcEntry = null;
+var nodeVersion = null;
+
+// 检测系统是否安装 Node.js；成功返回 true 并记录版本号到 nodeVersion
+var checkNode = function(){
+	var p = process.popen.cmd("node --version");
+	var out = p.readAll();
+	if(out){
+		var v = string.trim(out);
+		if(string.find(v, "^v?\d+\.\d+")){
+			nodeVersion = v;
+			return true;
+		}
+	}
+	nodeVersion = null;
+	return false;
+};
+
+// 未检测到 Node 时弹窗引导用户安装（可选打开官方下载页）
+var promptInstallNode = function(){
+	var ok = winform.msgboxTest(
+		"未检测到 Node.js 运行环境。\r\n\r\n"
+		++ "hostc 基于 Node.js 运行，请先安装 Node.js（建议下载 LTS 长期支持版），\r\n"
+		++ "安装完成后重新打开本软件即可。\r\n\r\n"
+		++ "是否现在打开 Node.js 官方下载页面？"
+		, "需要安装 Node.js");
+	if(ok){
+		process.execute("https://nodejs.org/zh-cn/download");
+	}
+};
+
+// 先确认 Node 可用，再解析 npm 全局目录与 hostc 入口
+if(checkNode()){
+	var pr = process.popen.cmd("npm root -g");
+	globalRoot = string.trim(pr.readAll());
+	if(#globalRoot){
+		hostcEntry = io.joinpath(globalRoot, "hostc\dist\index.js");
+	}
+}
+
+// ========== 工具函数 ==========
+
+// 追加日志（时间戳），edit 控件换行必须用 \r\n
+var log = function(...){
+	var args = {...};
+	var line = time().format("%H:%M:%S") + "  ";
+	for(i=1;#args){
+		if(i > 1) line ++= " ";
+		line ++= tostring(args[i]);
+	}
+	winform.editLog.text ++= line ++ '\r\n';
+};
+
+// 更新状态显示
+var setState = function(text, colorBgr){
+	winform.stateText.text = text;
+	winform.stateDot.bgcolor = colorBgr;
+	winform.stateDot.redraw();
+};
+
+// 从输出文本中提取字段
+var parseFields = function(text){
+	var r = {};
+	var pos = string.indexOf(text, "Public URL:");
+	if(pos) r.url = string.trim(string.match(string.slice(text, pos + 11), "[^\r\n]+"));
+	pos = string.indexOf(text, "Tunnel:");
+	if(pos) r.tunnel = string.trim(string.match(string.slice(text, pos + 7), "[^\r\n]+"));
+	pos = string.indexOf(text, "Channels:");
+	if(pos) r.channels = string.trim(string.match(string.slice(text, pos + 9), "[^\r\n]+"));
+	pos = string.indexOf(text, "Local:");
+	if(pos) r.local = string.trim(string.match(string.slice(text, pos + 6), "[^\r\n]+"));
+	return r;
+};
+
+// 停止读取定时器
+var stopReadTimer = function(){
+	if(readTimerId){
+		winform.clearInterval(readTimerId);
+		readTimerId = null;
+	}
+};
+
+// ========== 启动 / 停止 ==========
+
+var startTunnel = function(){
+	// 0. 必须先有 Node.js 运行环境
+	if(!checkNode()){
+		log("未检测到 Node.js，无法启动隧道。");
+		promptInstallNode();
+		return;
+	}
+
+	// 1. 校验参数
+	var port = tonumber(winform.editPort.text);
+	if(!port || port < 1 || port > 65535){
+		winform.msgbox("请输入有效的端口号（1-65535）");
+		return;
+	}
+	var localHost = string.trim(winform.editHost.text);
+	if(!localHost){
+		winform.msgbox("请输入本地主机地址");
+		return;
+	}
+	var channels = tonumber(winform.editCh.text);
+	if(!channels || channels < 1 || channels > 16){
+		winform.msgbox("通道数需为 1-16 的整数");
+		return;
+	}
+
+	// 2. 检查 hostc 是否已安装
+	if(!io.exist(hostcEntry)){
+		if( ! winform.msgboxTest("尚未检测到 hostc，是否立即通过 npm 全局安装？\n（安装后即可使用）")) return;
+		setState("正在安装 hostc...", 0xF5A623);
+		log("开始全局安装 hostc ...");
+		var ip = process.popen.cmd("npm install -g hostc@latest");
+		var iout, ierr = ip.readAll();
+		if(!io.exist(hostcEntry)){
+			setState("安装失败", 0xEA4335);
+			log("hostc 安装失败：", ierr or iout);
+			winform.msgbox("hostc 安装失败，请检查网络后重试。");
+			return;
+		}
+		log("hostc 安装完成。");
+	}
+
+	// 3. 检查本地端口是否可连接（连不上仅提示，不阻断）
+	var tcp = wsock.tcp.client();
+	var portOpen = tcp.connectTimeout(localHost, port, 1.5);
+	if(!portOpen){
+		if( ! winform.msgboxTest("本地 " ++ localHost ++ ":" ++ port ++ " 似乎还没有服务在监听。\n仍然继续启动隧道吗？")) return;
+	}
+
+	// 4. 构造参数并启动进程
+	var args = [hostcEntry, tostring(port), "--local-host", localHost, "--data-channels", tostring(channels)];
+	var server = string.trim(winform.editServer.text);
+	if(server){
+		table.push(args, "--server", server);
+	}
+
+	hostcProc = process.popen("node", args);
+	hostcProc.codepage = 65001;
+
+	// 5. 切换界面状态
+	readyUrl = "";
+	winform.editUrl.text = "";
+	winform.editLocal.text = "http://" ++ localHost ++ ":" ++ port ++ "/";
+	winform.btnStart.disabled = true;
+	winform.btnStop.disabled = false;
+	winform.btnQr.disabled = true;
+	setState("正在创建隧道...", 0xF5A623);
+	log("启动隧道：本地 " ++ localHost ++ ":" ++ port);
+
+	// 6. 定时读取输出
+	var pending = "";  // 未完成的残行
+	var allOut = "";   // 完整输出（用于字段解析）
+	var gotReady = false;
+	readTimerId = winform.setInterval(
+		function(){
+			if(!hostcProc) return 0;
+			var chunk = hostcProc.peek(100);
+			if(chunk){
+				allOut ++= chunk;
+
+				// 按行输出到日志
+				var combined = pending ++ chunk;
+				var start = 1;
+				while(true){
+					var nl = string.indexOf(combined, '\n', start);
+					if(!nl) break;
+					var ln = string.trim(string.slice(combined, start, nl - 1));
+					if(#ln) log(ln);
+					start = nl + 1;
+				}
+				pending = string.slice(combined, start);
+
+				if(!gotReady){
+					var f = parseFields(allOut);
+					if(f.url){
+						gotReady = true;
+						readyUrl = f.url;
+						if(readyUrl[#readyUrl] != 47) readyUrl ++= "/";
+						winform.editUrl.text = readyUrl;
+						setState("隧道运行中", 0x34A853);
+						winform.btnQr.disabled = false;
+						log("隧道已就绪：" ++ readyUrl);
+					}
+				}
+			}
+
+			// 进程意外退出
+			if(!hostcProc.stillActive()){
+				log("hostc 进程已退出。");
+				onProcEnded(false);
+				return 0;
+			}
+		},
+		300
+	);
+};
+
+// 进程结束后的界面复位；normalStop 表示用户主动停止
+onProcEnded = function(normalStop){
+	stopReadTimer();
+	hostcProc = null;
+	winform.btnStart.disabled = false;
+	winform.btnStop.disabled = true;
+	winform.btnQr.disabled = true;
+	setState(normalStop ? "已停止" : "已断开", normalStop ? 0x9AA0A6 : 0xEA4335);
+};
+
+var stopTunnel = function(){
+	if(!hostcProc) return;
+	log("正在停止隧道 ...");
+	stopReadTimer();
+	// terminate 直接结束 node 进程（node 直接启动，无子进程壳，可干净清理）
+	hostcProc.terminate();
+	hostcProc = null;
+	onProcEnded(true);
+	log("隧道已停止。");
+};
+
+// ========== 更新 hostc（更新底层 npm 包） ==========
+
+// 读取已安装的 hostc 版本
+var getCurrentVersion = function(){
+	var data = string.load(io.joinpath(globalRoot, "hostc\package.json"));
+	if(data){
+		var pkg = JSON.parse(data);
+		if(pkg && pkg.version) return tostring(pkg.version);
+	}
+	return null;
+};
+
+var updateHostc = function(){
+	// 更新依赖 npm，必须先有 Node.js
+	if(!checkNode()){
+		log("未检测到 Node.js，无法更新 hostc。");
+		promptInstallNode();
+		return;
+	}
+
+	// 更新前先停止运行中的隧道（避免文件占用导致更新失败）
+	if(hostcProc){
+		log("更新前先停止正在运行的隧道 ...");
+		stopTunnel();
+	}
+
+	winform.btnUpdate.disabled = true;
+	winform.btnDoctor.disabled = true;
+	winform.btnStart.disabled = true;
+	setState("正在检查更新...", 0xF5A623);
+	log("检查 hostc 更新 ...");
+
+	// 后台线程执行 npm 查询/安装，避免网络请求卡住界面
+	thread.invoke(
+		function(winform, globalRoot){
+			import process.popen;
+			import JSON;
+
+			var logLine = function(msg){
+				winform.editLog.text ++= time().format("%H:%M:%S") ++ "  " ++ msg ++ '\r\n';
+			};
+			var readVersion = function(){
+				var data = string.load(io.joinpath(globalRoot, "hostc\package.json"));
+				if(data){
+					var pkg = JSON.parse(data);
+					if(pkg && pkg.version) return tostring(pkg.version);
+				}
+				return null;
+			};
+			// 更新结束后复位界面（隧道已被停止，状态归为未启动）
+			var resetUi = function(){
+				winform.btnUpdate.disabled = false;
+				winform.btnDoctor.disabled = false;
+				winform.btnStart.disabled = false;
+				winform.stateText.text = "未启动";
+				winform.stateDot.bgcolor = 0x9AA0A6;
+				winform.stateDot.redraw();
+			};
+
+			var before = readVersion();
+			logLine(before ? ("当前版本：" ++ before) : "未检测到已安装的 hostc。");
+
+			// 1. 查询 npm 上的最新版本
+			var vp = process.popen.cmd("npm view hostc version");
+			var vout = vp.readAll();
+			var latest = vout ? string.trim(vout) : null;
+			if(!latest){
+				logLine("获取最新版本失败，请检查网络。");
+				resetUi();
+				winform.msgbox("检查更新失败：无法连接 npm 注册表，请检查网络后重试。");
+				return;
+			}
+			logLine("最新版本：" ++ latest);
+
+			if(before == latest){
+				logLine("已是最新版本，无需更新。");
+				resetUi();
+				winform.msgbox("hostc 已是最新版本（" ++ latest ++ "）。");
+				return;
+			}
+
+			// 2. 执行升级
+			logLine("开始更新 hostc ...");
+			var ip = process.popen.cmd("npm install -g hostc@latest");
+			var iout, ierr = ip.readAll();
+			var output = ierr or iout;
+			if(output){
+				output = string.replace(output, '\r\n', '\n');
+				var lines = string.split(output, '\n');
+				for(i=1;#lines){
+					var l = string.trim(tostring(lines[i]));
+					if(#l) logLine(l);
+				}
+			}
+
+			// 3. 校验升级结果
+			var after = readVersion();
+			if(after == latest){
+				logLine("更新完成：" ++ tostring(before) ++ "  →  " ++ after);
+				resetUi();
+				winform.msgbox("hostc 已更新到 " ++ after ++ "。");
+			}
+			else {
+				logLine("更新未成功，请查看上方日志或稍后重试。");
+				resetUi();
+				winform.msgbox("hostc 更新失败，请检查网络后重试。");
+			}
+		},
+		winform, globalRoot
+	);
+};
+
+// ========== 环境诊断 ==========
+
+var runDoctor = function(){
+	// 诊断要调用 node，先确认运行环境
+	if(!checkNode()){
+		log("未检测到 Node.js，无法运行环境诊断。");
+		promptInstallNode();
+		return;
+	}
+	if(!io.exist(hostcEntry)){
+		log("诊断：未检测到 hostc，请先启动一次隧道以自动安装。");
+		winform.msgbox("尚未安装 hostc，请先点击「启动隧道」自动安装。");
+		return;
+	}
+	var port = tonumber(winform.editPort.text);
+	var args = [hostcEntry, "doctor"];
+	if(port) table.push(args, tostring(port));
+	var server = string.trim(winform.editServer.text);
+	if(server) table.push(args, "--server", server);
+
+	setState("正在诊断...", 0xF5A623);
+	log("运行环境诊断 ...");
+	var dp = process.popen("node", args);
+	dp.codepage = 65001;
+	var out = dp.readAll();
+	if(out){
+		out = string.replace(out, '\r\n', '\n');
+		var lines = string.split(out, '\n');
+		for(i=1;#lines){
+			var line = string.trim(tostring(lines[i]));
+			if(#line) log(line);
+		}
+	}
+	setState(hostcProc ? "隧道运行中" : "未启动", hostcProc ? 0x34A853 : 0x9AA0A6);
+};
+
+// ========== 二维码弹窗 ==========
+
+var showQr = function(){
+	if(!readyUrl) return;
+	var qr = qrencode.bitmap(readyUrl);
+	var bmp = qr.copyBitmap(280);
+
+	var qform = win.form(text="公网地址二维码";right=319;bottom=379;bgcolor=0xFFFFFF;parent=winform);
+	qform.add(
+		qrPlus={cls="plus";left=20;top=20;right=300;bottom=300;bgcolor=0xFFFFFF;z=1};
+		qrUrl={cls="static";text=readyUrl;left=10;top=310;right=310;bottom=334;center=1;color=0x202124;font=LOGFONT(h=-12);z=2};
+		btnClose={cls="button";text="关闭";left=120;top=340;right=200;bottom=368;z=3}
+	)
+	qform.qrPlus.background = bmp;
+	qform.btnClose.oncommand = function(){
+		qform.close();
+	};
+	qform.onDestroy = function(){
+		bmp.delete();
+	};
+	qform.show();
+};
+
+// ========== 事件绑定 ==========
+
+winform.btnStart.oncommand = startTunnel;
+winform.btnStop.oncommand = stopTunnel;
+winform.btnDoctor.oncommand = runDoctor;
+winform.btnUpdate.oncommand = updateHostc;
+winform.btnQr.oncommand = showQr;
+winform.btnClear.oncommand = function(){
+	winform.editLog.text = "";
+};
+winform.btnCopyUrl.oncommand = function(){
+	if(readyUrl){
+		win.clip.write(readyUrl);
+		log("已复制公网地址：" ++ readyUrl);
+	}
+	else {
+		winform.msgbox("隧道尚未就绪，暂无公网地址。");
+	}
+};
+
+winform.onClose = function(){
+	if(hostcProc){
+		stopReadTimer();
+		hostcProc.terminate();
+		hostcProc = null;
+	}
+};
+
+// ========== 启动 ==========
+// res 目录在工程中配置为内嵌资源，虚拟路径在开发与发布后均可用
+// 直接 LoadImage + WM_SETICON（winform.icon 内部封装的 SendMessageP 在此环境传参异常）
+{
+	var iconPath = io.fullpath("\res\icon.ico");
+	var s,b = winform.dpiScale(16,32);
+	var hSmall = ::LoadImage(,iconPath,1,s+0.5,s+0.5,0x10);
+	var hBig = ::LoadImage(,iconPath,1,b+0.5,b+0.5,0x10);
+	::User32.SendMessageW(winform.hwnd,0x80/*WM_SETICON*/,0,hSmall:hBig);
+	::User32.SendMessageW(winform.hwnd,0x80,1,hBig:hSmall);
+}
+winform.show();
+log("hostc 可视化面板已启动。");
+
+// 启动后静默检查一次新版本（仅写入日志提示，不弹窗打扰）
+winform.setTimeout(
+	function(){
+		if(!checkNode() || !io.exist(hostcEntry)) return 0;
+		thread.invoke(
+			function(winform, globalRoot){
+				import process.popen;
+				import JSON;
+				var readVersion = function(){
+					var data = string.load(io.joinpath(globalRoot, "hostc\package.json"));
+					if(data){
+						var pkg = JSON.parse(data);
+						if(pkg && pkg.version) return tostring(pkg.version);
+					}
+					return null;
+				};
+				var cur = readVersion();
+				var vp = process.popen.cmd("npm view hostc version");
+				var out = vp.readAll();
+				var latest = out ? string.trim(out) : null;
+				if(cur && latest && latest != cur){
+					winform.editLog.text ++= time().format("%H:%M:%S")
+						++ "  发现新版本 " ++ latest ++ "（当前 " ++ cur
+						++ "），点击「更新 hostc」即可升级。" ++ '\r\n';
+				}
+			},
+			winform, globalRoot
+		);
+		return 0;
+	},
+	1500
+);
+if(!nodeVersion){
+	log("警告：未检测到 Node.js，请先安装 Node.js 后再使用隧道功能。");
+	// 启动时即弹窗一次引导安装（用户可选择暂不安装，稍后点任意功能会再次提示）
+	promptInstallNode();
+}
+else {
+	log("运行环境 Node.js " ++ nodeVersion);
+	if(!io.exist(hostcEntry)){
+		log("提示：尚未安装 hostc，点击「启动隧道」可自动安装。");
+	}
+	else {
+		log("已检测到 hostc：" ++ hostcEntry);
+	}
+}
+win.loopMessage();

@@ -1,0 +1,10 @@
+# aardio 构建中间产物
+.build/
+*.obj
+*.bak
+*.aa.bak.*
+*.aa.rbk.*
+
+# 临时下载文件
+res/*.dow!oad
+res/*-256.png
