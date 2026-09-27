@@ -1,5 +1,6 @@
 # aardio 构建中间产物
 .build/
+publish/
 *.obj
 *.bak
 *.aa.bak.*

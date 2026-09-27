@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<project ver="10" name="hostc可视化面板" libEmbed="true" icon="\res\icon.ico" ui="win" output="hostc面板.exe" CompanyName="hostc-gui" FileDescription="hostc 内网穿透可视化面板" LegalCopyright="基于 akazwz/hostc" ProductName="hostc 可视化面板" InternalName="hostc-gui" FileVersion="1.0.0.0" ProductVersion="1.0.0.0" publishDir="/publish/" dstrip="false">
+<project ver="10" name="hostc可视化面板" libEmbed="true" icon="\res\icon.ico" ui="win" output="hostc-panel.exe" CompanyName="hostc-gui" FileDescription="hostc 内网穿透可视化面板" LegalCopyright="基于 akazwz/hostc" ProductName="hostc 可视化面板" InternalName="hostc-gui" FileVersion="1.0.0.0" ProductVersion="1.0.0.0" publishDir="/publish/" dstrip="false">
 	<file name="main" path="main.aardio"/>
 	<folder name="res" path="res" embed="true" local="false" ignored="false">
 		<file name="icon.ico" path="res\icon.ico"/>

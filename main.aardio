@@ -7,36 +7,35 @@ import process;
 import process.popen;
 import qrencode.bitmap;
 import wsock.tcp.client;
+import inet.http;
 import JSON;
 
 /*DSG{{*/
-var winform = win.form(text="hostc 可视化面板";right=619;bottom=579;bgcolor=0xF2F3F5)
+var winform = win.form(text="hostc 可视化面板";right=619;bottom=561;bgcolor=0xF2F3F5)
 winform.add(
 bkTitle={cls="bkplus";text="hostc";left=0;top=0;right=620;bottom=46;bgcolor=0x20242B;align="left";color=0xFFFFFF;font=LOGFONT(h=-17;weight=700);textPadding={left=18};z=1};
-cfgCard={cls="bkplus";left=14;top=60;right=606;bottom=150;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=2};
+cfgCard={cls="bkplus";left=14;top=60;right=606;bottom=132;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=2};
 cfgTitle={cls="static";text="隧道配置";left=28;top=70;right=120;bottom=90;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=3};
 lbPort={cls="static";text="本地端口";left=28;top=98;right=100;bottom=118;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=4};
-editPort={cls="edit";text="3000";left=110;top=96;right=250;bottom=120;edge=1;z=5};
-lbServer={cls="static";text="服务器";left=280;top=98;right=340;bottom=118;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=6};
-editServer={cls="edit";text="";left=342;top=96;right=582;bottom=120;edge=1;z=7};
-statusCard={cls="bkplus";left=14;top=162;right=606;bottom=282;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=12};
-statusTitle={cls="static";text="隧道状态";left=28;top=172;right=120;bottom=192;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=13};
-stateDot={cls="plus";left=28;top=196;right=44;bottom=212;bgcolor=0x9AA0A6;border={radius=9};z=14};
-stateText={cls="static";text="未启动";left=50;top=196;right=160;bottom=216;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=15};
-lbUrl={cls="static";text="公网地址";left=28;top=226;right=100;bottom=246;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=16};
-editUrl={cls="edit";left=110;top=224;right=520;bottom=248;edge=1;readonly=1;z=17};
-btnQr={cls="button";text="二维码";left=526;top=224;right=594;bottom=248;disabled=1;z=18};
-lbLocal={cls="static";text="本地地址";left=28;top=256;right=100;bottom=276;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=19};
-editLocal={cls="edit";left=110;top=254;right=300;bottom=278;edge=1;readonly=1;z=20};
-btnCopyUrl={cls="button";text="复制公网地址";left=410;top=254;right=594;bottom=278;z=21};
-logCard={cls="bkplus";left=14;top=294;right=606;bottom=518;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=22};
-logTitle={cls="static";text="运行日志";left=28;top=304;right=120;bottom=324;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=23};
-btnClear={cls="button";text="清空";left=536;top=302;right=594;bottom=326;z=24};
-editLog={cls="edit";left=28;top=330;right=592;bottom=506;edge=1;multiline=1;vscroll=1;readonly=1;z=25};
-btnInstall={cls="button";text="安装/修复 hostc";left=14;top=530;right=164;bottom=564;z=26};
-btnDoctor={cls="button";text="环境诊断";left=174;top=530;right=294;bottom=564;z=27};
-btnStart={cls="button";text="启动隧道";left=386;top=530;right=496;bottom=564;z=28};
-btnStop={cls="button";text="停止隧道";left=506;top=530;right=606;bottom=564;disabled=1;z=29}
+editPort={cls="edit";text="3000";left=110;top=96;right=300;bottom=120;edge=1;z=5};
+statusCard={cls="bkplus";left=14;top=144;right=606;bottom=264;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=12};
+statusTitle={cls="static";text="隧道状态";left=28;top=154;right=120;bottom=174;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=13};
+stateDot={cls="plus";left=28;top=178;right=44;bottom=194;bgcolor=0x9AA0A6;border={radius=9};z=14};
+stateText={cls="static";text="未启动";left=50;top=178;right=160;bottom=198;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=15};
+lbUrl={cls="static";text="公网地址";left=28;top=208;right=100;bottom=228;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=16};
+editUrl={cls="edit";left=110;top=206;right=520;bottom=230;edge=1;readonly=1;z=17};
+btnQr={cls="button";text="二维码";left=526;top=206;right=594;bottom=230;disabled=1;z=18};
+lbLocal={cls="static";text="本地地址";left=28;top=238;right=100;bottom=258;transparent=1;color=0x202124;font=LOGFONT(h=-12);z=19};
+editLocal={cls="edit";text="http://127.0.0.1:3000/";left=110;top=236;right=300;bottom=260;edge=1;readonly=1;z=20};
+btnCopyUrl={cls="button";text="复制公网地址";left=410;top=236;right=594;bottom=260;z=21};
+logCard={cls="bkplus";left=14;top=276;right=606;bottom=500;bgcolor=0xFFFFFF;border={color=0xE4E7EB;width=1};z=22};
+logTitle={cls="static";text="运行日志";left=28;top=286;right=120;bottom=306;transparent=1;color=0x5F6368;font=LOGFONT(h=-12;weight=700);z=23};
+btnClear={cls="button";text="清空";left=536;top=284;right=594;bottom=308;z=24};
+editLog={cls="edit";left=28;top=312;right=592;bottom=488;edge=1;multiline=1;vscroll=1;readonly=1;z=25};
+btnInstall={cls="button";text="安装/修复 hostc";left=14;top=512;right=164;bottom=546;z=26};
+btnDoctor={cls="button";text="环境诊断";left=174;top=512;right=294;bottom=546;z=27};
+btnStart={cls="button";text="启动隧道";left=386;top=512;right=496;bottom=546;z=28};
+btnStop={cls="button";text="停止隧道";left=506;top=512;right=606;bottom=546;disabled=1;z=29}
 )
 /*}}*/
 
@@ -151,12 +150,28 @@ var setButtonsBusy = function(busy){
 	winform.btnStart.disabled = busy;
 };
 
+// 固定的本地回环主机与官方服务器（hostc 2.x 默认服务器域名）
+var LOCAL_HOST = "127.0.0.1";
+var SERVER_HOST = "hostc.app";
+
+// 根据端口输入框实时更新「本地地址」；端口非法时清空，避免显示错误地址
+var syncLocalAddress = function(){
+	var port = tonumber(winform.editPort.text);
+	if(port && port >= 1 && port <= 65535){
+		winform.editLocal.text = "http://" ++ LOCAL_HOST ++ ":" ++ port ++ "/";
+	}
+	else {
+		winform.editLocal.text = "";
+	}
+};
+
 // 从输出文本中提取公网 URL
 // 2.x: "  https://xxxx.hostc.app  → http://localhost:3000"
 // 1.x: "Public URL: https://xxxx.hostc.dev"
 var parseFields = function(text){
 	var r = {};
-	var url = string.match(text, "(https://[a-z0-9][a-z0-9-]*\.hostc\.[a-z]+)");
+	// 注意：aardio 模式里 ':' 是元字符，字面冒号必须转义为 '\:'
+var url = string.match(text, "(https\://[a-z0-9][a-z0-9-]*\.hostc\.[a-z]+)");
 	if(url) r.url = url;
 	else {
 		var pos = string.indexOf(text, "Public URL:");
@@ -189,8 +204,6 @@ var startTunnel = function(){
 		winform.msgbox("请输入有效的端口号（1-65535）");
 		return;
 	}
-	var localHost = "127.0.0.1";
-
 	// 2. 检查 hostc 是否已安装（缺失则自动走多级安装容错）
 	if(!resolveHostc()){
 		if( ! winform.msgboxTest('尚未检测到 hostc，是否立即安装？\n将依次尝试官方源、国内镜像与内置离线包。')) return;
@@ -199,15 +212,13 @@ var startTunnel = function(){
 
 	// 3. 检查本地端口是否可连接（连不上仅提示，不阻断）
 	var tcp = wsock.tcp.client();
-	var portOpen = tcp.connectTimeout(localHost, port, 1.5);
+	var portOpen = tcp.connectTimeout(LOCAL_HOST, port, 1.5);
 	if(!portOpen){
-		if( ! winform.msgboxTest('本地 ' ++ localHost ++ ':' ++ port ++ ' 似乎还没有服务在监听。\n仍然继续启动隧道吗？')) return;
+		if( ! winform.msgboxTest('本地 ' ++ LOCAL_HOST ++ ':' ++ port ++ ' 似乎还没有服务在监听。\n仍然继续启动隧道吗？')) return;
 	}
 
-	// 4. 构造参数并启动进程（2.x 目标直接写端口；1.x 兼容写法）
+	// 4. 构造参数并启动进程（2.x 目标直接写端口；使用默认官方服务器，无需 --server）
 	var args = [hostcEntry, tostring(port)];
-	var server = string.trim(winform.editServer.text);
-	if(server) table.push(args, "--server", server);
 
 	hostcProc = process.popen("node", args);
 	hostcProc.codepage = 65001;
@@ -215,12 +226,12 @@ var startTunnel = function(){
 	// 5. 切换界面状态
 	readyUrl = "";
 	winform.editUrl.text = "";
-	winform.editLocal.text = "http://" ++ localHost ++ ":" ++ port ++ "/";
+	syncLocalAddress();
 	winform.btnStart.disabled = true;
 	winform.btnStop.disabled = false;
 	winform.btnQr.disabled = true;
 	setState("正在创建隧道...", 0xF5A623);
-	log("启动隧道：本地 " ++ localHost ++ ":" ++ port ++ "（hostc " ++ hostcMajor ++ ".x）");
+	log("启动隧道：本地 " ++ LOCAL_HOST ++ ":" ++ port ++ "（hostc " ++ hostcMajor ++ ".x）");
 
 	// 6. 定时读取输出
 	var pending = "";  // 未完成的残行
@@ -513,27 +524,24 @@ var runDoctor = function(){
 	var port = tonumber(winform.editPort.text);
 	if(port){
 		var tcp = wsock.tcp.client();
-		if(tcp.connectTimeout("127.0.0.1", port, 1.5)){
-			log("[通过] 本地端口 127.0.0.1:" ++ port ++ " 有服务在监听。");
+		if(tcp.connectTimeout(LOCAL_HOST, port, 1.5)){
+			log("[通过] 本地端口 " ++ LOCAL_HOST ++ ":" ++ port ++ " 有服务在监听。");
 		} else {
 			log("[警告] 本地端口 " ++ port ++ " 暂无服务监听（请先启动你的项目）。");
 			allOk = false;
 		}
 	}
 
-	// 4. 隧道服务器连通性（2.x 默认 hostc.app）
-	var serverHost = "hostc.app";
-	var srv = string.trim(winform.editServer.text);
-	if(srv){
-		var m = string.match(srv, "https?://([^/]+)");
-		if(m) serverHost = m;
-	}
-	var http = ..inet.http();
-	var probe = http.get("https://" ++ serverHost ++ "/");
-	if(probe != null || http.lastStatusCode){
-		log("[通过] 隧道服务器 " ++ serverHost ++ " 可连接（HTTP " ++ tostring(http.lastStatusCode) ++ "）。");
+	// 4. 隧道服务器连通性（固定官方服务器 hostc.app）
+	// 能拿到响应内容或 HTTP 状态码，即代表服务器可达
+	var http = inet.http();
+	var body = http.get("https://" ++ SERVER_HOST ++ "/");
+	var code = http.lastStatusCode;
+	if((body && #body) || code){
+		log("[通过] 隧道服务器 " ++ SERVER_HOST ++ " 可连接"
+			++ (code ? "（HTTP " ++ code ++ "）。" : "。"));
 	} else {
-		log("[警告] 暂时无法连接服务器 " ++ serverHost ++ "，可能是网络问题。");
+		log("[警告] 暂时无法连接服务器 " ++ SERVER_HOST ++ "，可能是网络问题。");
 	}
 
 	log(allOk ? "诊断完成：环境正常，可以启动隧道。" : "诊断完成：存在需要处理的问题，详见上方。");
@@ -564,6 +572,11 @@ var showQr = function(){
 };
 
 // ========== 事件绑定 ==========
+
+// 端口内容变化时实时更新「本地地址」（EN_CHANGE：每次编辑都会触发）
+winform.editPort.onNotify = function(id, code){
+	if(code == 0x300/*EN_CHANGE*/) syncLocalAddress();
+};
 
 winform.btnStart.oncommand = startTunnel;
 winform.btnStop.oncommand = stopTunnel;
