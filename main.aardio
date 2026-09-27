@@ -239,8 +239,9 @@ var startTunnel = function(){
 	var gotReady = false;
 	readTimerId = winform.setInterval(
 		function(){
-			if(!hostcProc) return 0;
-			var chunk = hostcProc.peek(100);
+			var proc = hostcProc;   // 局部快照：peek 消息泵期间 hostcProc 可能被重入的停止操作置空
+			if(!proc) return 0;
+			var chunk = proc.peek(100);
 			if(chunk){
 				allOut ++= chunk;
 
@@ -270,8 +271,10 @@ var startTunnel = function(){
 				}
 			}
 
-			// 进程意外退出
-			if(!hostcProc.stillActive()){
+			// 进程意外退出（重入停止后 hostcProc 可能已被置空，此时无需再处理）
+			if(hostcProc != proc) return 0;
+			var active = call(function(){ return proc.stillActive(); });
+			if(!active){
 				log("hostc 进程已退出。");
 				onProcEnded(false);
 				return 0;
@@ -285,19 +288,35 @@ var startTunnel = function(){
 onProcEnded = function(normalStop){
 	stopReadTimer();
 	hostcProc = null;
+	readyUrl = "";
+	winform.editUrl.text = "";
 	winform.btnStart.disabled = false;
 	winform.btnStop.disabled = true;
 	winform.btnQr.disabled = true;
 	setState(normalStop ? "已停止" : "已断开", normalStop ? 0x9AA0A6 : 0xEA4335);
 };
 
+// 安全终止进程对象：容忍进程恰好刚结束、句柄已释放等情况，绝不向上抛错
+var killProcSafe = function(proc){
+	if(!proc) return;
+	// 仍存活才需要强杀；已退出直接跳过（对已退出进程 terminate 可能抛错）
+	var alive = call(function(){ return proc.stillActive(); });
+	if(alive){
+		call(function(){ proc.terminate(); });
+	}
+	else {
+		// 进程已退出，仅释放管道（close 不会关闭目标进程），容错执行
+		call(function(){ proc.close(); });
+	}
+};
+
 var stopTunnel = function(){
 	if(!hostcProc) return;
+	var proc = hostcProc;
 	log("正在停止隧道 ...");
 	stopReadTimer();
-	// terminate 直接结束 node 进程（node 直接启动，无子进程壳，可干净清理）
-	hostcProc.terminate();
-	hostcProc = null;
+	hostcProc = null;          // 先摘引用，避免定时器/其它路径再访问
+	killProcSafe(proc);
 	onProcEnded(true);
 	log("隧道已停止。");
 };
@@ -605,9 +624,10 @@ winform.btnCopyUrl.oncommand = function(){
 
 winform.onClose = function(){
 	if(hostcProc){
+		var proc = hostcProc;
 		stopReadTimer();
-		hostcProc.terminate();
 		hostcProc = null;
+		killProcSafe(proc);
 	}
 };
 
