@@ -18,7 +18,7 @@
 
 ### 直接使用 EXE
 
-下载 `publish/hostc面板.exe`，双击运行。
+前往 [**Releases 页面**](https://github.com/momochong0/hostc-gui/releases/latest) 下载 `hostc-panel-<版本>.exe`（或使用仓库内 `publish/hostc面板.exe`），双击运行。
 
 - 已安装 Node.js：首次启动隧道时会自动通过 npm 安装 hostc；
 - 未安装 Node.js：软件会弹窗并引导至 [Node.js 下载页](https://nodejs.org/zh-cn/download)。
